@@ -10,6 +10,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<UserRepository>(); // Register UserRepository
 builder.Services.AddScoped<AchievementRepository>(); // Register AchievementRepository
 
+// Add CORS policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAllOrigins",
+        builder => builder.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader());
+});
+
 builder.Services.AddControllers();
 
 // Configure Swagger/OpenAPI
@@ -32,6 +41,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Use CORS
+app.UseCors("AllowAllOrigins");
+
 app.UseAuthorization();
 app.MapControllers();
 
