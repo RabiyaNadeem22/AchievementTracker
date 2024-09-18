@@ -1,16 +1,16 @@
-using AchievementTracker.Repositories;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using AchievementTracker.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddScoped<UserRepository>(); // Register UserRepository
-builder.Services.AddScoped<AchievementRepository>(); // Register AchievementRepository
+// Register services
+builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<AchievementRepository>();
 
-// Add CORS policy
+// Configure CORS policy
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAllOrigins",
@@ -30,7 +30,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -42,7 +42,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Use CORS
+// Apply CORS policy
 app.UseCors("AllowAllOrigins");
 
 app.UseAuthorization();

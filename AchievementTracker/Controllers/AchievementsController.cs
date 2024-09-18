@@ -1,6 +1,7 @@
 ﻿using AchievementTracker.Models;
 using AchievementTracker.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 
 namespace AchievementTracker.Controllers
 {
@@ -15,29 +16,27 @@ namespace AchievementTracker.Controllers
             _repository = repository;
         }
 
-        // GET: api/achievements
         [HttpGet]
-        public IActionResult GetAchievements()
+        public IActionResult GetAchievements([FromQuery] int userId)
         {
             try
             {
-                var achievements = _repository.GetAchievements();
+                var achievements = _repository.GetAchievements(userId);
                 return Ok(achievements);
             }
             catch (Exception ex)
             {
-                // Log the exception (not implemented here)
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        // GET: api/achievements/{id}
         [HttpGet("{id}")]
         public IActionResult GetAchievement(int id)
         {
             try
             {
-                var achievements = _repository.GetAchievements();
+                var userId = HttpContext.Session.GetInt32("UserId") ?? 0;// Obtain the user ID from session or context
+                var achievements = _repository.GetAchievements(userId);
                 var achievement = achievements.FirstOrDefault(a => a.Id == id);
 
                 if (achievement == null)
@@ -49,12 +48,10 @@ namespace AchievementTracker.Controllers
             }
             catch (Exception ex)
             {
-                // Log the exception (not implemented here)
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        // POST: api/achievements
         [HttpPost]
         public IActionResult CreateAchievement([FromBody] Achievement achievement)
         {
@@ -65,17 +62,17 @@ namespace AchievementTracker.Controllers
 
             try
             {
+                var userId = HttpContext.Session.GetInt32("UserId") ?? 0;// Obtain the user ID from session or context
+                achievement.UserId = userId;
                 _repository.AddAchievement(achievement);
                 return CreatedAtAction(nameof(GetAchievement), new { id = achievement.Id }, achievement);
             }
             catch (Exception ex)
             {
-                // Log the exception (not implemented here)
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        // PUT: api/achievements/{id}
         [HttpPut("{id}")]
         public IActionResult UpdateAchievement(int id, [FromBody] Achievement achievement)
         {
@@ -86,7 +83,8 @@ namespace AchievementTracker.Controllers
 
             try
             {
-                var existingAchievements = _repository.GetAchievements();
+                var userId = HttpContext.Session.GetInt32("UserId") ?? 0;// Obtain the user ID from session or context
+                var existingAchievements = _repository.GetAchievements(userId);
                 var existingAchievement = existingAchievements.FirstOrDefault(a => a.Id == id);
 
                 if (existingAchievement == null)
@@ -99,18 +97,17 @@ namespace AchievementTracker.Controllers
             }
             catch (Exception ex)
             {
-                // Log the exception (not implemented here)
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        // DELETE: api/achievements/{id}
         [HttpDelete("{id}")]
         public IActionResult DeleteAchievement(int id)
         {
             try
             {
-                var existingAchievements = _repository.GetAchievements();
+                var userId = HttpContext.Session.GetInt32("UserId") ?? 0;
+                var existingAchievements = _repository.GetAchievements(userId);
                 var existingAchievement = existingAchievements.FirstOrDefault(a => a.Id == id);
 
                 if (existingAchievement == null)
@@ -123,8 +120,7 @@ namespace AchievementTracker.Controllers
             }
             catch (Exception ex)
             {
-                // Log the exception (not implemented here)
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
     }

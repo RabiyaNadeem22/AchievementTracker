@@ -1,7 +1,8 @@
-﻿using Microsoft.Data.SqlClient; // Updated namespace
+﻿using Microsoft.Data.SqlClient;
 using System.Collections.Generic;
 using System.Configuration;
-using AchievementTracker.Models; // Add this line
+using System.Linq;
+using AchievementTracker.Models;
 
 namespace AchievementTracker.Repositories
 {
@@ -14,16 +15,17 @@ namespace AchievementTracker.Repositories
             _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
 
-        public IEnumerable<Achievement> GetAchievements()
+        public IEnumerable<Achievement> GetAchievements(int userId)
         {
             var achievements = new List<Achievement>();
 
             using (SqlConnection conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
-                string query = "SELECT * FROM Achievements";
+                string query = "SELECT * FROM Achievements WHERE UserId = @UserId";
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
+                    cmd.Parameters.AddWithValue("@UserId", userId);
                     SqlDataReader reader = cmd.ExecuteReader();
                     while (reader.Read())
                     {
@@ -33,7 +35,8 @@ namespace AchievementTracker.Repositories
                             Title = reader.GetString(1),
                             Description = reader.GetString(2),
                             Date = reader.GetDateTime(3),
-                            Tag = reader.GetString(4)
+                            Tag = reader.GetString(4),
+                            UserId = reader.GetInt32(5) // Ensure UserId is included
                         });
                     }
                 }
@@ -47,13 +50,14 @@ namespace AchievementTracker.Repositories
             using (SqlConnection conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
-                string query = "INSERT INTO Achievements (Title, Description, Date, Tag) VALUES (@Title, @Description, @Date, @Tag)";
+                string query = "INSERT INTO Achievements (Title, Description, Date, Tag, UserId) VALUES (@Title, @Description, @Date, @Tag, @UserId)";
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@Title", achievement.Title);
                     cmd.Parameters.AddWithValue("@Description", achievement.Description);
                     cmd.Parameters.AddWithValue("@Date", achievement.Date);
                     cmd.Parameters.AddWithValue("@Tag", achievement.Tag);
+                    cmd.Parameters.AddWithValue("@UserId", achievement.UserId);
                     cmd.ExecuteNonQuery();
                 }
             }
