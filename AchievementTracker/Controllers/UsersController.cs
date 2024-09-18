@@ -21,11 +21,29 @@ namespace AchievementTracker.Controllers
             return Ok(_repository.GetUsers());
         }
 
-        [HttpPost]
-        public IActionResult CreateUser(User user)
+        [HttpPost("signup")]
+        public IActionResult Signup([FromBody] User user)
         {
+            if (_repository.GetUserByEmail(user.Email) != null)
+            {
+                return Conflict(new { message = "Email already exists" });
+            }
+
             _repository.AddUser(user);
-            return Ok();
+            return Ok(new { message = "User created successfully" });
+        }
+
+        [HttpPost("login")]
+        public IActionResult Login([FromBody] LoginModel loginModel)
+        {
+            var user = _repository.GetUserByEmail(loginModel.Email);
+
+            if (user == null || !BCrypt.Net.BCrypt.Verify(loginModel.Password, user.Password))
+            {
+                return Unauthorized(new { message = "Invalid email or password" });
+            }
+
+            return Ok(new { message = "Login successful" });
         }
 
         [HttpPut("{id}")]

@@ -1,5 +1,7 @@
-﻿using AchievementTracker.Models;
+﻿using System.Collections.Generic;
 using Microsoft.Data.SqlClient;
+using AchievementTracker.Models;
+using BCrypt.Net;
 
 namespace AchievementTracker.Repositories
 {
@@ -40,8 +42,35 @@ namespace AchievementTracker.Repositories
             return users;
         }
 
+        public User GetUserByEmail(string email)
+        {
+            using (SqlConnection conn = new SqlConnection(_connectionString))
+            {
+                conn.Open();
+                string query = "SELECT * FROM Users WHERE Email = @Email";
+                using (SqlCommand cmd = new SqlCommand(query, conn))
+                {
+                    cmd.Parameters.AddWithValue("@Email", email);
+                    SqlDataReader reader = cmd.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        return new User
+                        {
+                            Id = reader.GetInt32(0),
+                            Name = reader.GetString(1),
+                            Email = reader.GetString(2),
+                            Password = reader.GetString(3),
+                            Industry = reader.GetString(4)
+                        };
+                    }
+                }
+            }
+            return null;
+        }
+
         public void AddUser(User user)
         {
+            user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password); // Hash the password
             using (SqlConnection conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
