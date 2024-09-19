@@ -1,6 +1,8 @@
 ﻿using AchievementTracker.Models;
 using AchievementTracker.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Linq;
 
 namespace AchievementTracker.Controllers
@@ -10,32 +12,46 @@ namespace AchievementTracker.Controllers
     public class AchievementsController : ControllerBase
     {
         private readonly AchievementRepository _repository;
+        private readonly ILogger<AchievementsController> _logger;
 
-        public AchievementsController(AchievementRepository repository)
+        public AchievementsController(AchievementRepository repository, ILogger<AchievementsController> logger)
         {
             _repository = repository;
+            _logger = logger;
         }
 
-        [HttpGet]
-        public IActionResult GetAchievements([FromQuery] int userId)
+        [HttpGet("user/{userId}")]
+        public IActionResult GetAchievements(int userId)
         {
+            if (userId <= 0)
+            {
+                return BadRequest("Invalid user ID");
+            }
+
             try
             {
                 var achievements = _repository.GetAchievements(userId);
+                if (achievements == null || !achievements.Any())
+                {
+                    return NotFound("No achievements found for this user.");
+                }
+
                 return Ok(achievements);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "An error occurred while retrieving achievements for user ID {UserId}", userId);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
         [HttpGet("{id}")]
+      
         public IActionResult GetAchievement(int id)
         {
             try
             {
-                var userId = HttpContext.Session.GetInt32("UserId") ?? 0;// Obtain the user ID from session or context
+                var userId = HttpContext.Session.GetInt32("UserId") ?? 0; // Obtain the user ID from session or context
                 var achievements = _repository.GetAchievements(userId);
                 var achievement = achievements.FirstOrDefault(a => a.Id == id);
 
@@ -48,12 +64,13 @@ namespace AchievementTracker.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "An error occurred while retrieving achievement ID {Id}", id);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
         [HttpPost]
-        public IActionResult CreateAchievement([FromBody] Achievement achievement)
+        public IActionResult CreateAchievement([FromBody] Achievement achievement, int userId)
         {
             if (achievement == null)
             {
@@ -62,13 +79,13 @@ namespace AchievementTracker.Controllers
 
             try
             {
-                var userId = HttpContext.Session.GetInt32("UserId") ?? 0;// Obtain the user ID from session or context
-                achievement.UserId = userId;
+                achievement.UserId = userId; // Set UserId from the parameter
                 _repository.AddAchievement(achievement);
                 return CreatedAtAction(nameof(GetAchievement), new { id = achievement.Id }, achievement);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "An error occurred while creating an achievement for user ID {UserId}", userId);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -83,13 +100,19 @@ namespace AchievementTracker.Controllers
 
             try
             {
-                var userId = HttpContext.Session.GetInt32("UserId") ?? 0;// Obtain the user ID from session or context
-                var existingAchievements = _repository.GetAchievements(userId);
-                var existingAchievement = existingAchievements.FirstOrDefault(a => a.Id == id);
+                var userId = HttpContext.Session.GetInt32("UserId") ?? 0;
+                var existingAchievement = _repository.GetAchievements(userId)
+                    .FirstOrDefault(a => a.Id == id);
 
                 if (existingAchievement == null)
                 {
                     return NotFound();
+                }
+
+                // Check if the UserId matches
+                if (existingAchievement.UserId != userId)
+                {
+                    return Forbid("You are not authorized to update this achievement.");
                 }
 
                 _repository.UpdateAchievement(achievement);
@@ -97,6 +120,7 @@ namespace AchievementTracker.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "An error occurred while updating achievement ID {Id}", id);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -107,12 +131,12 @@ namespace AchievementTracker.Controllers
             try
             {
                 var userId = HttpContext.Session.GetInt32("UserId") ?? 0;
-                var existingAchievements = _repository.GetAchievements(userId);
-                var existingAchievement = existingAchievements.FirstOrDefault(a => a.Id == id);
+                var existingAchievement = _repository.GetAchievements(userId)
+                    .FirstOrDefault(a => a.Id == id);
 
                 if (existingAchievement == null)
                 {
-                    return NotFound();
+                    return NotFound("Achievement not found or you do not have permission to delete it.");
                 }
 
                 _repository.DeleteAchievement(id);
@@ -120,8 +144,9 @@ namespace AchievementTracker.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "An error occurred while deleting achievement ID {Id}", id);
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
     }
-}
+    }

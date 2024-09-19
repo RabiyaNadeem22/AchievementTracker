@@ -38,13 +38,16 @@ namespace AchievementTracker.Controllers
         {
             var user = _repository.GetUserByEmail(loginModel.Email);
 
+            // Check if the user exists and the password matches
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginModel.Password, user.Password))
             {
                 return Unauthorized(new { message = "Invalid email or password" });
             }
 
-            return Ok(new { message = "Login successful" });
+            // Return userId and success message
+            return Ok(new { message = "Login successful", userId = user.Id });
         }
+
 
         [HttpPut("{id}")]
         public IActionResult UpdateUser(int id, User user)
