@@ -68,10 +68,11 @@ namespace AchievementTracker.Repositories
             using (SqlConnection conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
-                string query = "UPDATE Achievements SET Title = @Title, Description = @Description, Date = @Date, Tag = @Tag WHERE Id = @Id";
+                string query = "UPDATE Achievements SET Title = @Title, Description = @Description, Date = @Date, Tag = @Tag WHERE Id = @Id AND UserId = @UserId";
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@Id", achievement.Id);
+                    cmd.Parameters.AddWithValue("@UserId", achievement.UserId); // Ensure UserId is included for authorization
                     cmd.Parameters.AddWithValue("@Title", achievement.Title);
                     cmd.Parameters.AddWithValue("@Description", achievement.Description);
                     cmd.Parameters.AddWithValue("@Date", achievement.Date);
@@ -81,18 +82,25 @@ namespace AchievementTracker.Repositories
             }
         }
 
-        public void DeleteAchievement(int id)
+
+        public void DeleteAchievement(int userId, int id)
         {
             using (SqlConnection conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
-                string query = "DELETE FROM Achievements WHERE Id = @Id";
+                string query = "DELETE FROM Achievements WHERE Id = @Id AND UserId = @UserId";
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     cmd.Parameters.AddWithValue("@Id", id);
-                    cmd.ExecuteNonQuery();
+                    cmd.Parameters.AddWithValue("@UserId", userId);
+                    int rowsAffected = cmd.ExecuteNonQuery();
+
+                    if (rowsAffected == 0)
+                    {
+                        throw new Exception("No rows were deleted. Achievement might not exist or does not belong to the user.");
+                    }
                 }
             }
         }
     }
-}
+    }

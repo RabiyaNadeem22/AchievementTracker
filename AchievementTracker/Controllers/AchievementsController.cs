@@ -1,6 +1,7 @@
 ﻿using AchievementTracker.Models;
 using AchievementTracker.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
@@ -46,7 +47,7 @@ namespace AchievementTracker.Controllers
         }
 
         [HttpGet("{id}")]
-      
+
         public IActionResult GetAchievement(int id)
         {
             try
@@ -89,9 +90,8 @@ namespace AchievementTracker.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
-
-        [HttpPut("{id}")]
-        public IActionResult UpdateAchievement(int id, [FromBody] Achievement achievement)
+        [HttpPut("{userId}/{id}")]
+        public IActionResult UpdateAchievement(int userId, int id, [FromBody] Achievement achievement)
         {
             if (achievement == null || id != achievement.Id)
             {
@@ -100,13 +100,12 @@ namespace AchievementTracker.Controllers
 
             try
             {
-                var userId = HttpContext.Session.GetInt32("UserId") ?? 0;
                 var existingAchievement = _repository.GetAchievements(userId)
                     .FirstOrDefault(a => a.Id == id);
 
                 if (existingAchievement == null)
                 {
-                    return NotFound();
+                    return NotFound("Achievement not found.");
                 }
 
                 // Check if the UserId matches
@@ -115,6 +114,7 @@ namespace AchievementTracker.Controllers
                     return Forbid("You are not authorized to update this achievement.");
                 }
 
+                // Update the achievement
                 _repository.UpdateAchievement(achievement);
                 return NoContent();
             }
@@ -125,13 +125,13 @@ namespace AchievementTracker.Controllers
             }
         }
 
-        [HttpDelete("{id}")]
-        public IActionResult DeleteAchievement(int id)
+
+        [HttpDelete("{userid}/{id}")]
+        public IActionResult DeleteAchievement(int userid, int id)
         {
             try
             {
-                var userId = HttpContext.Session.GetInt32("UserId") ?? 0;
-                var existingAchievement = _repository.GetAchievements(userId)
+                var existingAchievement = _repository.GetAchievements(userid)
                     .FirstOrDefault(a => a.Id == id);
 
                 if (existingAchievement == null)
@@ -139,8 +139,14 @@ namespace AchievementTracker.Controllers
                     return NotFound("Achievement not found or you do not have permission to delete it.");
                 }
 
-                _repository.DeleteAchievement(id);
+                // Pass userId and id to the repository method
+                _repository.DeleteAchievement(userid, id);
                 return NoContent();
+            }
+            catch (SqlException sqlEx)
+            {
+                _logger.LogError(sqlEx, "SQL error occurred while deleting achievement ID {Id}", id);
+                return StatusCode(500, "Database error: " + sqlEx.Message);
             }
             catch (Exception ex)
             {
@@ -149,4 +155,4 @@ namespace AchievementTracker.Controllers
             }
         }
     }
-    }
+}
