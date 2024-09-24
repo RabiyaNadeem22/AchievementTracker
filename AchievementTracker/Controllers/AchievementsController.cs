@@ -124,7 +124,24 @@ namespace AchievementTracker.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+        [HttpGet("search")]
+        public async Task<ActionResult<List<Achievement>>> SearchAchievements([FromQuery] string tag, [FromQuery] int userId)
+        {
+            // Check if userId is valid
+            if (userId <= 0)
+            {
+                return BadRequest("Invalid user ID.");
+            }
 
+            var achievements = await _repository.GetAchievementsByTagAsync(tag, userId);
+
+            if (achievements.Count == 0)
+            {
+                return NotFound("No achievements found with the given tag.");
+            }
+
+            return Ok(achievements);
+        }
 
         [HttpDelete("{userid}/{id}")]
         public IActionResult DeleteAchievement(int userid, int id)

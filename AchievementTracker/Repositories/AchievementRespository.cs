@@ -81,7 +81,38 @@ namespace AchievementTracker.Repositories
                 }
             }
         }
+        public async Task<List<Achievement>> GetAchievementsByTagAsync(string tag, int userId)
+        {
+            var achievements = new List<Achievement>();
 
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                using (var command = new SqlCommand("SELECT Id, Title, Description, Date, Tag, UserId FROM Achievements WHERE Tag LIKE @Tag AND UserId = @UserId", connection))
+                {
+                    command.Parameters.Add(new SqlParameter("@Tag", $"%{tag}%"));
+                    command.Parameters.Add(new SqlParameter("@UserId", userId));
+
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            achievements.Add(new Achievement
+                            {
+                                Id = reader.GetInt32(0),
+                                Title = reader.GetString(1),
+                                Description = reader.GetString(2),
+                                Date = reader.GetDateTime(3),
+                                Tag = reader.GetString(4),
+                                UserId = reader.GetInt32(5)
+                            });
+                        }
+                    }
+                }
+            }
+
+            return achievements;
+        }
 
         public void DeleteAchievement(int userId, int id)
         {
